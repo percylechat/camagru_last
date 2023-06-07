@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+</head>
+<body>
+  <div id="error">{{error}}</div>
+  <div>
+      <<form method="post" action="{{ url_for('send_email') }}">
+        <label>email</label><input name="email" type="text" required/>
+        <input type="submit" value="submit"></form>
+  </div>

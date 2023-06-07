@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+
+
+body {
+    background-color: lightgreen;
+  }
+  
+  
+  div {
+    width: 50%;
+    border: 15px solid green;
+    padding: 50px;
+    margin: auto;
+  } 
+  
+  div.fake_header{
+    width: 100%;
+    border: 15px solid rgb(40, 184, 40);
+    padding: 50px;
+    margin: auto;
+    content: center;
+  }
+
+  button {
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+  }
+
+
+  h1 {
+    color: white;
+    text-align: center;
+  }
+  
+  p {
+    font-family: verdana;
+    font-size: 20px;
+  }
+  </style>
+  </head>
+  <body>
+
+  <div><h1>CAMAGRU LOL</h1></div>
+  <p>fuck css</p>
+    <div class="fake_header">
+        {% if is_logged == "True" %}
+        <button class="favorite styled"
+                type="button">
+            create image
+        </button>
+        <button class="favorite styled"
+        type="button">
+        my page
+        </button>
+        <button class="favorite styled"
+        type="button">
+        logout
+        </button>
+        {% else %}
+        <button class="favorite styled"
+                type="button">
+            login
+        </button>
+        {% endif %}
+    </div>
+  </body>
+</html>
