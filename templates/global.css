@@ -1,0 +1,72 @@
+/* Reset default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Set font and background */
+body {
+  font-family: "Comic Sans MS", cursive;
+  background-color: lightpink;
+}
+
+/* Set div styles */
+div {
+  border-radius: 10px;
+  padding: 10px;
+}
+
+/* Set different shades of green for divs */
+div:nth-child(odd) {
+  background-color: #7ef9a7;
+}
+
+div:nth-child(even) {
+  background-color: #70f291;
+}
+
+/* Mobile-friendly adjustments */
+@media only screen and (max-width: 768px) {
+  div {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+}
+
+
+.container {
+    display: flex;
+    width: 95%;
+  }
+
+  .maindivwebcam {
+  background-color: pink;
+  flex: 2;
+  }
+
+.sidedivwebcam {
+  background-color: pink;
+  flex: 1;
+}
+
+#photo {
+  border: 1px solid black;
+  box-shadow: 2px 2px 3px black;
+  width:320px;
+  height:240px;
+}
+
+#canvas {
+  display:none;
+}
+
+.camera {
+  width: 340px;
+  display:inline-block;
+}
+
+.output {
+  width: 340px;
+  display:inline-block;
+}

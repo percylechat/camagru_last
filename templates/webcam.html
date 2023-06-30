@@ -4,28 +4,26 @@
 
 <!DOCTYPE html>
 <html lang="en"><head>
-    <title>WebRTC: Still photo capture demo</title>
 	<meta charset='utf-8'>
-	<link rel="stylesheet" href="main.css" type="text/css" media="all">
+	<link rel="stylesheet" href="global.css" type="text/css" media="all">
 	<script src="./capture.js">
 	</script>
     </head>
   <body>
-    <div class="contentarea">
-        <h1>MDN - navigator.mediaDevices.getUserMedia() : illustrer comment capturer une image</h1>
-        <p>
-          Dans cet exemple, on illustre comment utiliser un flux média provenant de la webcam, en récupérer une image et créer un PNG à partir de celle-ci pour l'afficher sur la page.
-        </p>
-        <div class="camera">
-          <video id="video">Le flux vidéo n'est pas disponible.</video>
-          <button id="startbutton">Prendre une photo</button>
+    <div class="container">
+        <div class="left-div">
+          <<div class="camera">
+            <video id="video">Webcam unavailable.</video>
+            <button id="startbutton">Take a picture</button>
+          </div>
+          <canvas id="canvas"> </canvas>
+          <div class="output">
+            <img id="photo" alt="Result of image manipulation.">
+          </div>
         </div>
-        <canvas id="canvas"> </canvas>
-        <div class="output">
-          <img id="photo" alt="L'image capturée apparaîtra ici.">
+        <div class="right-div">
+          <p> lol </p>
         </div>
-        <p>
-          Consultez l'article <a href="https://developer.mozilla.org/fr/docs/Web/API/WebRTC_API/Taking_still_photos">Prendre des photos avec <code>getUserMedia()</code></a> pour en savoir plus sur les technologies utilisées ici.
-        </p>
       </div>
+      
   </body></html>      

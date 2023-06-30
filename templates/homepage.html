@@ -7,25 +7,27 @@
 
 body {
     background-color: lightgreen;
+    font-family: "Comic Sans MS", cursive;
   }
   
   
   div {
     width: 50%;
     border: 15px solid green;
-    padding: 50px;
     margin: auto;
+    padding: 10px;
+    text-align: center;
   } 
   
   div.fake_header{
-    width: 100%;
-    border: 15px solid rgb(40, 184, 40);
-    padding: 50px;
+    width: 95%;
+    border: 5px solid rgb(40, 184, 40);
+    padding: 20px;
     margin: auto;
     content: center;
   }
 
-  button {
+  .button {
     background-color: #4CAF50; /* Green */
     border: none;
     color: white;
@@ -50,28 +52,33 @@ body {
   </head>
   <body>
 
-  <div><h1>CAMAGRU LOL</h1></div>
-  <p>fuck css</p>
+  CAMAGRU LOL
     <div class="fake_header">
         {% if is_logged == "True" %}
-        <button class="favorite styled"
-                type="button">
-            create image
-        </button>
-        <button class="favorite styled"
-        type="button">
-        my page
-        </button>
-        <button class="favorite styled"
-        type="button">
-        logout
-        </button>
+          <button class="favorite styled" type="button">
+          create image</button>
+          <button class="favorite styled" type="button">
+          my page
+          </button>
+          <button class="favorite styled" type="button">
+          logout
+          </button>
         {% else %}
-        <button class="favorite styled"
-                type="button">
-            login
-        </button>
+          <a class="button" id="SignUp" href="/signup" margin-left:30px>
+          Sign Up</a>
+          <a class="button" id="LogIn" href="/login">
+          Log In</a>
         {% endif %}
+    </div>
+    <div>
+      {% if is_logged == "True" %}
+        <form action="https://localhost:5000/">…</form>
+
+      {% else %}
+        {% for item in images %}   
+          <img src="{{ item }}" alt="Image">
+        {% endfor %}
+      {% endif %}
     </div>
   </body>
 </html>

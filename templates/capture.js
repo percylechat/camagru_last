@@ -78,6 +78,8 @@
   // format data URL. By drawing it on an offscreen canvas and then
   // drawing that to the screen, we can change its size and/or apply
   // other changes before drawing it.
+ 
+
 
   function takepicture() {
     var context = canvas.getContext('2d');
@@ -87,7 +89,25 @@
       context.drawImage(video, 0, 0, width, height);
     
       var data = canvas.toDataURL('image/png');
+      function sendImageToServer(imageData) {
+        fetch('http://localhost:5000/send_webcam', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ image: imageData }),
+        })
+          .then(response => response.json())
+          .then(data => {
+            console.log('Image uploaded successfully:', data);
+          })
+          .catch(error => {
+            console.error('Error uploading image:', error);
+          });
+      }
+        sendImageToServer(data);      
       photo.setAttribute('src', data);
+      console.log("hello")
     } else {
       clearphoto();
     }
