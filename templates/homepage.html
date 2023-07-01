@@ -72,8 +72,13 @@ body {
     </div>
     <div>
       {% if is_logged == "True" %}
-        <form action="https://localhost:5000/">…</form>
-
+        {% for item, like_nbr, comments in images, likes_nbr, all_comments %}   
+          <img src="{{ item }}" alt="Image">
+          <div>liked {{ line_nbr }} times</div>
+          {% for comment in comments%}
+            <div>{{ comment["txt"] }} by {{ comment["author"] }} at {{ comment["date"] }}</div>
+          {% endfor %}
+        {% endfor %}
       {% else %}
         {% for item in images %}   
           <img src="{{ item }}" alt="Image">

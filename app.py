@@ -151,6 +151,12 @@ def check_which_page(username: str):
     return redirect("/profile")
 
 
+def sanitize_input(txt: str) -> str:
+    if "delete" or "select" or "drop" or "insert" or "update" in txt.lower():
+        return "Forbidden word"
+    return "ok"
+
+
 # TODO add better validation rules ?
 def valid_password(password: str) -> bool:
     if len(password) < 8:
@@ -169,16 +175,15 @@ def valid_email(email: str) -> bool:
     # return False
 
 
-def valid_username(user: str) -> bool:
+def valid_username(user: str) -> str:
     # if len(password) > 8:
     sqlfetch = """SELECT * from users WHERE name=?"""
     cur = conn.cursor()
     cur.execute(sqlfetch, (user,))
     rep = cur.fetchall()
     if rep or len(user) < 1:
-        # flash("This username is already taken")
-        return False
-    return True
+        return "This username is already taken"
+    return "ok"
 
 
 def is_connected(uuid: str) -> bool:
@@ -340,36 +345,56 @@ def signup():
         return redirect("/")
     if request.method == "GET":
         return render_template("signup.html", error="")
-    name = request.get_json().get("name")
-    password = request.get_json().get("password")
-    # email = request.get_json().get("email")
-    # name = request.form["name"]
-    # password = request.form["password"]
-    # email = request.form["email"]
+    name = request.form["name"]
+    password = request.form["password"]
+    email = request.form["email"]
     print(request)
     print(name, password)
-    if not (valid_password(password) and valid_email(email) and valid_username(name)):
-        # flash("This username is already taken")
-        return render_template("signup.html", error="error")
-        # return dict("Error", "invalid something")
-    # return jsonify({"status": "ko", "data": "fail"})
+    check = sanitize_input(name)
+    if check != "ok":
+        return render_template("signup.html", error=check)
+    check = valid_username(name)
+    if check != "ok":
+        return render_template("signup.html", error=check)
+    check = sanitize_input(password)
+    if check != "ok":
+        return render_template("signup.html", error=check)
+    check = valid_username(password)
+    if check != "ok":
+        return render_template("signup.html", error=check)
+    check = sanitize_input(email)
+    if check != "ok":
+        return render_template("signup.html", error=check)
+    check = valid_username(email)
+    if check != "ok":
+        return render_template("signup.html", error=check)
+
     conf_uuid = str(uuid.uuid4())
     sql = """ INSERT INTO users(name, email, password, confirmed, conf_uuid) VALUES(?,?,?,?,?) """
     # sql = """ INSERT INTO users(name, email, password) VALUES(?,?,?) """
     cur = conn.cursor()
-    user = (name, email, password, False, conf_uuid)
-    # user = (name, email, password)
-    cur.execute(sql, user)
+    cur.execute(
+        sql,
+        (
+            name,
+            email,
+            password,
+            False,
+            conf_uuid,
+        ),
+    )
     conn.commit()
-    # msg = Message(
-    #     "Welcome to camagru",
-    #     recipients=[email],
-    #     html=render_template('email_conf_register.html', confirm_url="http://localhost:5000/" + conf_uuid),
-    #     sender=app.config['MAIL_DEFAULT_SENDER']
-    # )
-    # mail.send(msg)
-    # return (dict("Valid", True))
-    # return jsonify({"status": "ok", "data": "ok"})
+    msg = Message(
+        "Welcome to camagru",
+        recipients=[email],
+        html=render_template(
+            "email_conf_register.html", confirm_url="http://localhost:5000/" + conf_uuid
+        ),
+        sender=app.config["MAIL_DEFAULT_SENDER"],
+    )
+    mail.send(msg)
+    return dict("Valid", True)
+    return jsonify({"status": "ok", "data": "ok"})
     return render_template("success_signup.html", email=email)
     # render_template("signup.html")
 
@@ -380,20 +405,22 @@ def send_email():
         return render_template("send_email.html")
     email = request.form["email"]
     print(request)
-    if not valid_email(email):
-        return render_template("send_email.html", error="error: invalid email")
-    # msg = Message(
-    #     "Welcome to camagru",
-    #     recipients=[email],
-    #     html=render_template('email_conf_register.html', confirm_url="http://localhost:5000/"),
-    #     sender=app.config['MAIL_DEFAULT_SENDER']
-    # )
+    # if not valid_email(email):
+    #     return render_template("send_email.html", error="error: invalid email")
+    msg = Message(
+        "Welcome to camagru",
+        recipients=[email],
+        html=render_template(
+            "email_conf_register.html", confirm_url="http://localhost:5000/"
+        ),
+        sender=app.config["MAIL_DEFAULT_SENDER"],
+    )
 
     msg = Message()
     msg.subject = "Email Subject"
     msg.recipients = [email]
     # msg.sender = '42projectbdb@gmail.com'
-    msg.sender = "percevallechat@yahoo.com"
+    msg.sender = "camagru@greatparis.fr"
     msg.body = "Email body"
     mail.send(msg)
     return render_template("success_signup.html", email=email)
@@ -435,21 +462,21 @@ def login():
 
 if __name__ == "__main__":
 
-    app.config["MAIL_SERVER"] = "smtp.gmail.com"
+    app.config["MAIL_SERVER"] = "mail.gandi.net"
     app.config["MAIL_PORT"] = 465
     app.config["MAIL_USE_SSL"] = True
     # app.config['MAIL_USERNAME'] = "42projectbdb@gmail.com"
     # app.config['MAIL_PASSWORD'] = "bebeIvitch13/"
-    app.config["MAIL_USERNAME"] = "percevallechat@yahoo.com"
-    app.config["MAIL_PASSWORD"] = "Ivitch13/"
+    app.config["MAIL_USERNAME"] = "camagru@greatparis.com"
+    app.config["MAIL_PASSWORD"] = "Perceval"
     mail = Mail(app)
     app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
     app.config["CORS_HEADERS"] = "Content-Type"
     if not os.path.isfile("basedatatest.sqlite"):
         conn = sqlite3.connect("basedatatest.sqlite", check_same_thread=False)
         c = conn.cursor()
-        # create_table_sql = """CREATE TABLE users (id int PRIMARY KEY,name text,email text, password text, uuid text, confirmed boolean, conf_uuid text)"""
-        create_table_user_sql = """CREATE TABLE users (user_id integer PRIMARY KEY, name text,email text, password text, uuid text)"""
+        create_table_user_sql = """CREATE TABLE users (id int PRIMARY KEY,name text,email text, password text, uuid text, confirmed boolean, conf_uuid text)"""
+        # create_table_user_sql = """CREATE TABLE users (user_id integer PRIMARY KEY, name text,email text, password text, uuid text)"""
         create_table_image_sql = """CREATE TABLE images (image_id integer PRIMARY KEY, created datetime default current_timestamp, address text, like_nbr int, comment_nbr int, user_id int, FOREIGN KEY(user_id) REFERENCES users(user_id))"""
         create_table_comment_sql = """CREATE TABLE comments (comment_id integer PRIMARY KEY, created datetime default current_timestamp, content text, image_id int, user_id int, FOREIGN KEY(image_id) REFERENCES images(image_id), FOREIGN KEY(user_id) REFERENCES users(user_id))"""
         create_table_like_sql = """CREATE TABLE likes (like_id integer PRIMARY KEY, image_id int, user_id int, FOREIGN KEY(image_id) REFERENCES images(image_id), FOREIGN KEY(user_id) REFERENCES users(user_id))"""
