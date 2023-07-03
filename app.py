@@ -22,7 +22,7 @@ app.config["MAIL_PORT"] = 465
 app.config["MAIL_USE_SSL"] = True
 # TODO variable d env pour mail
 app.config["MAIL_USERNAME"] = "camagru@greatparis.fr"
-app.config["MAIL_PASSWORD"] = "PercevalLeChat"
+app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PWD")
 mail = Mail(app)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["CORS_HEADERS"] = "Content-Type"
