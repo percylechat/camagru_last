@@ -6,18 +6,28 @@ import base64
 import uuid
 from flask_cors import CORS, cross_origin
 from flask_mail import Mail, Message
+import sys
 
 import sys
 
 
 app = Flask(__name__, static_url_path="/images/", static_folder="images/")
-conn = None
+# conn = None
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 UPLOAD_FOLDER = "images"
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
-
+app.config["MAIL_SERVER"] = "mail.gandi.net"
+app.config["MAIL_PORT"] = 465
+app.config["MAIL_USE_SSL"] = True
+# TODO variable d env pour mail
+app.config["MAIL_USERNAME"] = "camagru@greatparis.fr"
+app.config["MAIL_PASSWORD"] = "PercevalLeChat"
+mail = Mail(app)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["CORS_HEADERS"] = "Content-Type"
 CORS(app)
+
 
 # TODO NOT FINISHED
 def get_all_comments(image: str):
@@ -152,7 +162,15 @@ def check_which_page(username: str):
 
 
 def sanitize_input(txt: str) -> str:
-    if "delete" or "select" or "drop" or "insert" or "update" in txt.lower():
+    if "delete" in txt.lower():
+        return "Forbidden word"
+    if "select" in txt.lower():
+        return "Forbidden word"
+    if "drop" in txt.lower():
+        return "Forbidden word"
+    if "insert" in txt.lower():
+        return "Forbidden word"
+    if "update" in txt.lower():
         return "Forbidden word"
     return "ok"
 
@@ -160,19 +178,19 @@ def sanitize_input(txt: str) -> str:
 # TODO add better validation rules ?
 def valid_password(password: str) -> bool:
     if len(password) < 8:
-        return False
+        return "Password is too short"
     if not any(char.isdigit() for char in password):
-        return False
+        return "Missing digit in password"
     if not any(char.isalpha() for char in password):
-        return False
-    return True
+        return "Missing letter in password"
+    return "ok"
 
 
 # TODO check email properly
 def valid_email(email: str) -> bool:
-    # if len(password) > 8:
-    return True
-    # return False
+    if "@" not in email or len(email) < 6:
+        return "error in email"
+    return "ok"
 
 
 def valid_username(user: str) -> str:
@@ -335,7 +353,24 @@ def hello():
     )
 
 
-# TODO error handling for signup
+@app.route("/conf_email/<uuid>")
+def confirm_inscription(uuid: str):
+    sqlfetch = """SELECT * from users WHERE conf_uuid=?"""
+    cur = conn.cursor()
+    cur.execute(sqlfetch, (uuid,))
+    rep = cur.fetchone()
+    if not rep:
+        return render_template("homepage.html", is_logged="false", images=get_images(0))
+    else:
+        cookie = str(uuid.uuid4())
+        print(cookie)
+        sqlup = """ UPDATE users SET confirmed=? uuid=? WHERE conf_uuid=?"""
+        cur = conn.cursor()
+        cur.execute(sqlup, (True, cookie, uuid))
+        conn.commit()
+        resp = make_response(redirect("/success_co"))
+        resp.set_cookie("userID", cookie)
+        return resp
 
 
 @cross_origin()
@@ -345,9 +380,9 @@ def signup():
         return redirect("/")
     if request.method == "GET":
         return render_template("signup.html", error="")
-    name = request.form["name"]
-    password = request.form["password"]
-    email = request.form["email"]
+    name = request.form["n_name"]
+    password = request.form["n_password"]
+    email = request.form["n_email"]
     print(request)
     print(name, password)
     check = sanitize_input(name)
@@ -359,16 +394,15 @@ def signup():
     check = sanitize_input(password)
     if check != "ok":
         return render_template("signup.html", error=check)
-    check = valid_username(password)
+    check = valid_password(password)
     if check != "ok":
         return render_template("signup.html", error=check)
     check = sanitize_input(email)
     if check != "ok":
         return render_template("signup.html", error=check)
-    check = valid_username(email)
+    check = valid_email(email)
     if check != "ok":
         return render_template("signup.html", error=check)
-
     conf_uuid = str(uuid.uuid4())
     sql = """ INSERT INTO users(name, email, password, confirmed, conf_uuid) VALUES(?,?,?,?,?) """
     # sql = """ INSERT INTO users(name, email, password) VALUES(?,?,?) """
@@ -390,13 +424,10 @@ def signup():
         html=render_template(
             "email_conf_register.html", confirm_url="http://localhost:5000/" + conf_uuid
         ),
-        sender=app.config["MAIL_DEFAULT_SENDER"],
+        sender="camagru@greatparis.fr",
     )
     mail.send(msg)
-    return dict("Valid", True)
-    return jsonify({"status": "ok", "data": "ok"})
     return render_template("success_signup.html", email=email)
-    # render_template("signup.html")
 
 
 @app.route("/send_email", methods=["POST", "GET"])
@@ -413,15 +444,15 @@ def send_email():
         html=render_template(
             "email_conf_register.html", confirm_url="http://localhost:5000/"
         ),
-        sender=app.config["MAIL_DEFAULT_SENDER"],
+        sender="camagru@greatparis.fr",
     )
 
-    msg = Message()
-    msg.subject = "Email Subject"
-    msg.recipients = [email]
-    # msg.sender = '42projectbdb@gmail.com'
-    msg.sender = "camagru@greatparis.fr"
-    msg.body = "Email body"
+    # msg = Message()
+    # msg.subject = "Email Subject"
+    # msg.recipients = [email]
+    # # msg.sender = '42projectbdb@gmail.com'
+    # msg.sender = "camagru@greatparis.fr"
+    # msg.body = "Email body"
     mail.send(msg)
     return render_template("success_signup.html", email=email)
 
@@ -460,19 +491,13 @@ def login():
     return render_template("login.html")
 
 
+print("toto", file=sys.stderr)
 if __name__ == "__main__":
+    global conn
 
-    app.config["MAIL_SERVER"] = "mail.gandi.net"
-    app.config["MAIL_PORT"] = 465
-    app.config["MAIL_USE_SSL"] = True
-    # app.config['MAIL_USERNAME'] = "42projectbdb@gmail.com"
-    # app.config['MAIL_PASSWORD'] = "bebeIvitch13/"
-    app.config["MAIL_USERNAME"] = "camagru@greatparis.com"
-    app.config["MAIL_PASSWORD"] = "Perceval"
-    mail = Mail(app)
-    app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-    app.config["CORS_HEADERS"] = "Content-Type"
+    print("hello", file=sys.stderr)
     if not os.path.isfile("basedatatest.sqlite"):
+        print("here", file=sys.stderr)
         conn = sqlite3.connect("basedatatest.sqlite", check_same_thread=False)
         c = conn.cursor()
         create_table_user_sql = """CREATE TABLE users (id int PRIMARY KEY,name text,email text, password text, uuid text, confirmed boolean, conf_uuid text)"""
@@ -492,5 +517,6 @@ if __name__ == "__main__":
         c.execute(sql, ("images/cat.png", 1, 0, 0))
         conn.commit()
     else:
+        print("there", file=sys.stderr)
         conn = sqlite3.connect("basedatatest.sqlite", check_same_thread=False)
     app.run()
