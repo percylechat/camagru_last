@@ -72,11 +72,20 @@ body {
     </div>
     <div>
       {% if is_logged == "True" %}
-        {% for item, like_nbr, comments in images, likes_nbr, all_comments %}   
+        {% for item, like_nbr, comments, is_liked in images, likes_nbr, all_comments, is_likeds %}   
           <img src="{{ item }}" alt="Image">
           <div>liked {{ line_nbr }} times</div>
+            <div>{% if is_liked == "True" %}
+              you like it
+              UNLIKE BUTTON
+              {% else %}
+              you don't like it
+              LIKE BUTTON
+              {% endif %}
+          </div>
           {% for comment in comments%}
             <div>{{ comment["txt"] }} by {{ comment["author"] }} at {{ comment["date"] }}</div>
+            COMMENT BUTTON AND SHIT
           {% endfor %}
         {% endfor %}
       {% else %}
