@@ -144,15 +144,17 @@ def delete_image(address):
     cur.commit()
 
 
-def get_images(id_: int):
+def get_images_for_user(id_: int):
     cur = conn.cursor()
     sql = "SELECT address FROM images WHERE user_id=? ORDER BY created"
-    cur.execute(sql, (id_))
+    print(id_)
+    cur.execute(sql, (id_,))
     res = cur.fetchall()
     i = 0
     ret = []
+    print(res)
     while i < len(res):
-        ret.append(res[i][2])
+        ret.append("images/"+str(res[i][0])+".png")
         i += 1
     return ret
 
@@ -351,10 +353,10 @@ def add_comment():
 #TODO add 3rd image
 @app.route("/webcam", methods=["POST", "GET"])
 def show_webcam():
-    return render_template("webcam.html")
+    uuid_ = request.cookies.get("userID")
+    return render_template("webcam.html", infos=get_images_for_user(get_user_id(uuid_)))
 
 #TODO html display to see images and delete
-
 
 # @cross_origin()
 

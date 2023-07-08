@@ -94,25 +94,28 @@
     </head>
   <body>
     <div class="container">
-        <div class="left-div">
-          <<div class="camera">
-            <video id="video">Webcam unavailable.</video>
-            <button id="startbutton">Take a picture</button>
-            <!-- <button onclick="sendRequest()">Envoyer la requête</button> -->
-          </div>
-          <canvas id="canvas"> </canvas>
-          <div class="output">
-            <img id="photo" alt="Result of image manipulation.">
-          </div>
+      <div class="left-div">
+        <div class="camera">
+          <video id="video">Webcam unavailable.</video>
         </div>
-        <div class="right-div">
-          <div class="image-container">
-            <div class="image-container">
-              <img src="./../images/catok.png" alt="images/catok.png" onclick="selectImage(this)">
-              <img src="./../images/frameok.png" alt="images/frameok.png" onclick="selectImage(this)">
-              <img src="./../images/flameok.png" alt="images/flameok.png" onclick="selectImage(this)">
-            </div>
+        <canvas id="canvas"> </canvas>
+        <div class="output">
+          <img id="photo" alt="Result of image manipulation.">
         </div>
+        <div class="image-container">
+          <img src="./../images/catok.png" alt="images/catok.png" onclick="selectImage(this)">
+          <img src="./../images/frameok.png" alt="images/frameok.png" onclick="selectImage(this)">
+          <img src="./../images/flameok.png" alt="images/flameok.png" onclick="selectImage(this)">
+        </div>
+        <button id="startbutton">Take a picture</button>
       </div>
-      
+      <div class="right-div">
+        {% for item in infos %}   
+          <img src="{{ item }}" alt="Image">
+          <form action="/delete_image" method="POST">
+            <input type="hidden" name="image" value="{{ item }}">
+            <input type="submit" value="Delete image">
+          </form>
+        {% endfor %}
+      </div>
   </body></html>      
