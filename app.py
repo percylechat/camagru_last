@@ -132,11 +132,13 @@ def get_images(index: int):
 @app.route("/send_webcam", methods=["POST"])
 def send_webcam():
     image_data = request.get_json()["image"]
+    image_filter = request.get_json()["filter"]
+    print("image: ", image_data, image_filter)
     # Save the image to a file or perform any other desired operations
     # Example: saving the image to a file named 'image.jpg'
-    with open("image.png", "wb") as file:
-        file.write(base64.b64decode(image_data.split(",")[1]))
-    return {"message": "Image uploaded successfully"}
+    # with open("image.png", "wb") as file:
+    #     file.write(base64.b64decode(image_data.split(",")[1]))
+    # return {"message": "Image uploaded successfully"}
 
 
 # @app.route("/get_image", methods=["POST, GET"])
@@ -579,7 +581,7 @@ def signup():
     mail.send(msg)
     return render_template("success_signup.html", email=email)
 
-
+#TODO add 3rd image
 @app.route("/webcam", methods=["POST", "GET"])
 def show_webcam():
     return render_template("webcam.html")

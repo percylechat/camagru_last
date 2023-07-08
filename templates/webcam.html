@@ -5,7 +5,90 @@
 <!DOCTYPE html>
 <html lang="en"><head>
 	<meta charset='utf-8'>
-	<link rel="stylesheet" href="global.css" type="text/css" media="all">
+<style>/* Reset default styles */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  /* Set font and background */
+  body {
+    font-family: "Comic Sans MS", cursive;
+    background-color: lightpink;
+  }
+  
+  /* Set div styles */
+  div {
+    border-radius: 10px;
+    padding: 10px;
+  }
+  
+  /* Set different shades of green for divs */
+  div:nth-child(odd) {
+    background-color: #7ef9a7;
+  }
+  
+  div:nth-child(even) {
+    background-color: #70f291;
+  }
+  
+  /* Mobile-friendly adjustments */
+  @media only screen and (max-width: 768px) {
+    div {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+  }
+  
+  
+  .container {
+      display: flex;
+      width: 95%;
+    }
+  
+    .maindivwebcam {
+    background-color: pink;
+    flex: 2;
+    }
+  
+  .sidedivwebcam {
+    background-color: pink;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+    .image-container img {
+      cursor: pointer;
+      margin: 10px;
+      border: 2px solid transparent;
+    }
+
+    .image-container img.selected {
+      border-color: blue;
+    }
+  #photo {
+    border: 1px solid black;
+    box-shadow: 2px 2px 3px black;
+    width:320px;
+    height:240px;
+  }
+  
+  #canvas {
+    display:none;
+  }
+  
+  .camera {
+    width: 340px;
+    display:inline-block;
+  }
+  
+  .output {
+    width: 340px;
+    display:inline-block;
+  }
+  </style>
 	<script src="./../images/capture.js">
 	</script>
     </head>
@@ -15,6 +98,7 @@
           <<div class="camera">
             <video id="video">Webcam unavailable.</video>
             <button id="startbutton">Take a picture</button>
+            <!-- <button onclick="sendRequest()">Envoyer la requête</button> -->
           </div>
           <canvas id="canvas"> </canvas>
           <div class="output">
@@ -22,7 +106,24 @@
           </div>
         </div>
         <div class="right-div">
-          <p> lol </p>
+          <div class="image-container">
+            <div class="image-container">
+              <img src="image1.jpg" alt="Image 1" onclick="selectImage(this)">
+              <img src="image2.jpg" alt="Image 2" onclick="selectImage(this)">
+              <img src="image3.jpg" alt="Image 3" onclick="selectImage(this)">
+            </div>
+            
+            <!-- <input class="image-radio" type="radio" name="image" id="image1">
+            <label for="image1"><img src="./../images/cat640.png" alt="cat"></label>
+          </div>
+          <div class="image-container">
+            <input class="image-radio" type="radio" name="image" id="image2">
+            <label for="image2"><img src="./../images/frame600.png" alt="frame"></label>
+          </div>
+          <div class="image-container">
+            <input class="image-radio" type="radio" name="image" id="image3">
+            <label for="image3"><img src="./../images/flame640.png" alt="fire"></label>
+          </div> -->
         </div>
       </div>
       

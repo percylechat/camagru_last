@@ -1,10 +1,11 @@
-(function() {
+
+
   // The width and height of the captured photo. We will set the
   // width to the value defined here, but the height will be
   // calculated based on the aspect ratio of the input stream.
-
-  var width = 320;    // We will scale the photo width to this
-  var height = 0;     // This will be computed based on the input stream
+  let selectedImage = null
+  var width = 640;    // We will scale the photo width to this
+  var height = 400;     // This will be computed based on the input stream
 
   // |streaming| indicates whether or not we're currently streaming
   // video from the camera. Obviously, we start at false.
@@ -18,6 +19,7 @@
   var canvas = null;
   var photo = null;
   var startbutton = null;
+
 
   function startup() {
     video = document.getElementById('video');
@@ -53,6 +55,8 @@
       }
     }, false);
 
+
+    
     startbutton.addEventListener('click', function(ev){
       takepicture();
       ev.preventDefault();
@@ -83,7 +87,8 @@
 
   function takepicture() {
     var context = canvas.getContext('2d');
-    if (width && height) {
+
+    if (width && height && selectedImage) {
       canvas.width = width;
       canvas.height = height;
       context.drawImage(video, 0, 0, width, height);
@@ -95,7 +100,7 @@
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ image: imageData }),
+          body: JSON.stringify({ image: imageData, filter: selectedImage }),
         })
           .then(response => response.json())
           .then(data => {
@@ -109,11 +114,23 @@
       photo.setAttribute('src', data);
       console.log("hello")
     } else {
+      alert("Veuillez sélectionner une image avant d'envoyer la requête.");
       clearphoto();
     }
   }
 
   // Set up our event listener to run the startup process
   // once loading is complete.
+  function selectImage(imgElement) {
+        // Réinitialiser la sélection précédente
+        if (selectedImage) {
+          selectedImage.classList.remove('selected');
+        }
+  
+        // Sélectionner la nouvelle image
+        selectedImage = imgElement;
+        selectedImage.classList.add('selected');
+    };
   window.addEventListener('load', startup, false);
-})();
+
+
