@@ -37,43 +37,51 @@ def get_img_id(image: str) -> int:
     return ids[0][0]
 
 
+def get_user_name(user_id):
+    cur = conn.cursor()
+    sqlfetch = """SELECT name from users WHERE user_id=?"""
+    cur.execute(sqlfetch, (user_id,))
+    name = cur.fetchone()
+    return name[0]
+
+
 def get_all_comments(image: str):
     cur = conn.cursor()
     id_ = get_img_id(image)
-    print(id_, type(id_))
     sqlfetch = """SELECT * from comments WHERE image_id=? ORDER BY created"""
     cur.execute(sqlfetch, (id_,))
     comments_ = cur.fetchall()
-    return comments_
-
-
-# TAKES image adress and username of current user
-def add_comment(image: str, user: str, txt: str):
-    cur = conn.cursor()
-    sqlfetch = """SELECT user_id from users WHERE name=?"""
-    cur.execute(sqlfetch, (user,))
-    user_ = cur.fetchone()
-    sqlfetch = """SELECT user_id from images WHERE address=?"""
-    cur.execute(sqlfetch, (image,))
-    image_ = cur.fetchone()
-    sql = """ INSERT INTO comments(content, image_, user_) VALUES(?,?,?) """
-    cur.execute(sql, (txt, image_[0], user_[0]))
-    conn.commit()
+    t_comment = []
+    eleme = ()
+    for el in comments_:
+        user_ = get_user_name(el[4])
+        eleme += (el[2],)
+        eleme += (user_,)
+        eleme += (el[1],)
+        t_comment.append(eleme)
+        eleme = ()
+    return t_comment
 
 
 def is_image_liked(image: str, user: str) -> bool:
     cur = conn.cursor()
-    sqlfetch = """SELECT user_id from users WHERE name=?"""
+    sqlfetch = """SELECT user_id from users WHERE cookie_uuid=?"""
     cur.execute(sqlfetch, (user,))
     user_ = cur.fetchone()
     sqlfetch = """SELECT image_id from images WHERE address=?"""
     cur.execute(sqlfetch, (image,))
     image_ = cur.fetchone()
     sql = """ SELECT * FROM likes WHERE user_id=? AND image_id=? """
-    print(image_, user_)
-    cur.execute(sql, (image_[0], user_[0]))
-    resp = cur.fetchall()
-    if not resp:
+    cur.execute(
+        sql,
+        (
+            user_[0],
+            image_[0],
+        ),
+    )
+    resp = cur.fetchone()
+    print(resp, resp[0])
+    if resp[0] is not None:
         return False
     return True
 
@@ -84,43 +92,6 @@ def get_all_likes(image: str) -> int:
     cur.execute(sqlfetch, (image,))
     image_ = cur.fetchall()
     return len(image_)
-
-
-# TAKES image adress and username of current user
-def remove_like(image: str, user: str):
-    cur = conn.cursor()
-    sqlfetch = """SELECT user_id from users WHERE name=?"""
-    cur.execute(sqlfetch, (user,))
-    user_ = cur.fetchone()
-    sqlfetch = """SELECT image_id from images WHERE address=?"""
-    cur.execute(sqlfetch, (image,))
-    image_ = cur.fetchone()
-    sqlfetch = """DELETE * from likes WHERE user_id=? AND image_id=?"""
-    cur.execute(
-        sqlfetch,
-        (
-            user_[0],
-            image_[0],
-        ),
-    )
-    conn.commit()
-
-
-# TODO add +1 to like nbr table
-# TAKES image adress and username of current user
-def add_like(image: str, user: str):
-    cur = conn.cursor()
-    sqlfetch = """SELECT user_id from users WHERE name=?"""
-    cur.execute(sqlfetch, (user,))
-    user_ = cur.fetchone()
-    sqlfetch = """SELECT image_id from images WHERE address=?"""
-    cur.execute(sqlfetch, (image,))
-    image_ = cur.fetchone()
-    sql = """ INSERT INTO likes(image_, user_) VALUES(?,?) """
-    like_ = (image_[0], user_[0])
-    cur.execute(sql, like_)
-    sql = """" UPDATE imagess SET confirmed=?, cookie_uuid=? WHERE conf_uuid=?"""
-    conn.commit()
 
 
 def get_images_and_infos(index: int, user: str):
@@ -135,7 +106,6 @@ def get_images_and_infos(index: int, user: str):
     ret_c = []
     ret_il = []
     while i < len(res) and i < true_index + 5:
-        print(i, res[i], res[i][2])
         ret_i.append(res[i][2])
         ret_l.append(res[i][3])
         ret_c.append(get_all_comments(res[i][2]))
@@ -153,7 +123,6 @@ def get_images(index: int):
     i = 0
     ret = []
     while i < len(res) and i < true_index + 5:
-        print(i, res[i], res[i][2])
         ret.append(res[i][2])
         i += 1
     return ret
@@ -240,7 +209,6 @@ def valid_username(user: str) -> str:
 
 def is_connected(uuid_: str) -> bool:
     if uuid_:
-        print(uuid_)
         sqlfetch = """SELECT * from users WHERE cookie_uuid=?"""
         cur = conn.cursor()
         cur.execute(sqlfetch, (uuid_,))
@@ -248,6 +216,29 @@ def is_connected(uuid_: str) -> bool:
         if rep:
             return True
     return False
+
+
+def get_email_is_true(uuid):
+    sqlfetch = """SELECT * from users WHERE cookie_uuid=?"""
+    cur = conn.cursor()
+    cur.execute(sqlfetch, (uuid,))
+    rep = cur.fetchone()
+    return rep[7]
+
+
+def send_email_comment(user_id: int):
+    sqlfetch = """SELECT * from users WHERE user_id=?"""
+    cur = conn.cursor()
+    cur.execute(sqlfetch, (user_id,))
+    rep = cur.fetchone()
+    if rep[7] == True:
+        msg = Message(
+            "Camagru news",
+            recipients=[rep[2]],
+            html=render_template("email_comment.html"),
+            sender="camagru@greatparis.fr",
+        )
+        mail.send(msg)
 
 
 # @app.route('/upload')
@@ -265,6 +256,78 @@ def is_connected(uuid_: str) -> bool:
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+# TAKES image adress and username of current user
+def remove_like(image: str, user: str):
+    cur = conn.cursor()
+    sqlfetch = """SELECT user_id from users WHERE name=?"""
+    cur.execute(sqlfetch, (user,))
+    user_ = cur.fetchone()
+    sqlfetch = """SELECT image_id from images WHERE address=?"""
+    cur.execute(sqlfetch, (image,))
+    image_ = cur.fetchone()
+    sqlfetch = """DELETE * from likes WHERE user_id=? AND image_id=?"""
+    cur.execute(
+        sqlfetch,
+        (
+            user_[0],
+            image_[0],
+        ),
+    )
+    conn.commit()
+
+
+@app.route("/add_like", methods=["POST"])
+def add_like():
+    user = request.cookies.get("userID")
+    image = request.form["image"]
+    cur = conn.cursor()
+    sqlfetch = """SELECT user_id from users WHERE cookie_uuid=?"""
+    cur.execute(sqlfetch, (user,))
+    user_ = cur.fetchone()
+    sqlfetch = """SELECT image_id from images WHERE address=?"""
+    cur.execute(sqlfetch, (image,))
+    image_ = cur.fetchone()
+    sql = """ INSERT INTO likes(image_id, user_id) VALUES(?,?) """
+    like_ = (image_[0], user_[0])
+    cur.execute(sql, like_)
+    sqlfetch = """SELECT like_nbr from images WHERE address=?"""
+    cur.execute(sqlfetch, (image,))
+    like_n_ = cur.fetchone()
+    print("add like", like_n_)
+    new_like = like_n_[0] + 1
+    print(new_like)
+    sql = """ UPDATE images SET like_nbr=? WHERE address=?"""
+    cur.execute(
+        sql,
+        (
+            new_like,
+            image,
+        ),
+    )
+    conn.commit()
+    return redirect("/")
+
+
+# TODO add email ping
+@app.route("/add_comment", methods=["POST"])
+def add_comment():
+    user = request.cookies.get("userID")
+    image = request.form["image"]
+    txt = request.form["comment"]
+    cur = conn.cursor()
+    sqlfetch = """SELECT user_id from users WHERE cookie_uuid=?"""
+    cur.execute(sqlfetch, (user,))
+    user_ = cur.fetchone()
+    sqlfetch = """SELECT image_id from images WHERE address=?"""
+    cur.execute(sqlfetch, (image,))
+    image_ = cur.fetchone()
+    sql = """ INSERT INTO comments(content, image_id, user_id) VALUES(?,?,?) """
+    cur.execute(sql, (txt, image_[0], user_[0]))
+    conn.commit()
+    send_email_comment(user_[0])
+    return redirect("/")
 
 
 @app.route("/uploader", methods=["POST"])
@@ -298,15 +361,6 @@ def _404error():
     return render_template("404.html")
 
 
-@app.route("/home")
-def home():
-    if not is_connected(request.cookies.get("userID")):
-        return redirect("/404error")
-    name = request.cookies.get("userID")
-    # return '<h1>welcome ' + name + '</h1>'
-    return render_template("home.html")
-
-
 @app.route("/success_co")
 def success_co():
     name = request.cookies.get("userID")
@@ -314,42 +368,105 @@ def success_co():
     # return redirect("/home.html")
 
 
-@app.route("/change_useremail", methods=["POST"])
-def change_useremail():
-    email = request.form["email"]
-    uuid_ = request.cookies.get("userID")
-    sqlup = """ UPDATE users SET email=? WHERE cookie_uuid=?"""
-    cur = conn.cursor()
-    cur.execute(sqlup, (email, uuid_))
-    conn.commit()
-
-
-@app.route("/change_userpassword", methods=["POST"])
-def change_userpassword():
-    password = request.form["password"]
-    # uuid = request.cookies.get("userID")
-    sqlup = """ UPDATE users SET password=? WHERE cookie_uuid=?"""
-    cur = conn.cursor()
-    cur.execute(sqlup, (password, uuid_))
-    conn.commit()
-
-
-@app.route("/change_username", methods=["GET, POST"])
-def change_username():
+# TODO adapt function
+@cross_origin()
+@app.route("/change_preference", methods=["POST", "GET"])
+def change_pref():
     uuid_ = request.cookies.get("userID")
     if not is_connected(uuid_):
         return redirect("/404error")
+    if request.method == "GET":
+        return render_template("change_preference.html", error="")
     if request.method == "POST":
-        name = request.form["name"]
+        name = request.form["n_name"]
+        check = sanitize_input(name)
+        if check != "ok":
+            return render_template("change_useremail.html", error=check)
+        check = valid_email(name)
+        if check != "ok":
+            return render_template("change_useremail.html", error=check)
+        sqlup = """ UPDATE users SET email=? WHERE cookie_uuid=?"""
+        cur = conn.cursor()
+        cur.execute(sqlup, (name, uuid_))
+        conn.commit()
+        return render_template("my_page.html")
+    return render_template("change_useremail.html", error="")
+
+
+@cross_origin()
+@app.route("/change_useremail", methods=["POST", "GET"])
+def change_email():
+    uuid_ = request.cookies.get("userID")
+    if not is_connected(uuid_):
+        return redirect("/404error")
+    if request.method == "GET":
+        return render_template("change_useremail.html", error="")
+    if request.method == "POST":
+        name = request.form["n_name"]
+        check = sanitize_input(name)
+        if check != "ok":
+            return render_template("change_useremail.html", error=check)
+        check = valid_email(name)
+        if check != "ok":
+            return render_template("change_useremail.html", error=check)
+        sqlup = """ UPDATE users SET email=? WHERE cookie_uuid=?"""
+        cur = conn.cursor()
+        cur.execute(sqlup, (name, uuid_))
+        conn.commit()
+        return render_template("my_page.html")
+    return render_template("change_useremail.html", error="")
+
+
+@cross_origin()
+@app.route("/change_userpassword", methods=["POST", "GET"])
+def change_password():
+    uuid_ = request.cookies.get("userID")
+    if not is_connected(uuid_):
+        return redirect("/404error")
+    if request.method == "GET":
+        return render_template("change_userpassword.html", error="")
+    if request.method == "POST":
+        name = request.form["n_name"]
+        check = sanitize_input(name)
+        if check != "ok":
+            return render_template("change_userpassword.html", error=check)
+        check = valid_password(name)
+        if check != "ok":
+            return render_template("change_userpassword.html", error=check)
+        sqlup = """ UPDATE users SET password=? WHERE cookie_uuid=?"""
+        cur = conn.cursor()
+        cur.execute(sqlup, (name, uuid_))
+        conn.commit()
+        return render_template("my_page.html")
+    return render_template("change_userpassword.html", error="")
+
+
+@cross_origin()
+@app.route("/change_username", methods=["POST", "GET"])
+def change_name():
+    uuid_ = request.cookies.get("userID")
+    if not is_connected(uuid_):
+        return redirect("/404error")
+    if request.method == "GET":
+        return render_template("change_username.html", error="")
+    if request.method == "POST":
+        name = request.form["n_name"]
+        check = sanitize_input(name)
+        if check != "ok":
+            return render_template("change_username.html", error=check)
+        check = valid_useris_likename(name)
+        if check != "ok":
+            return render_template("change_username.html", error=check)
         sqlup = """ UPDATE users SET name=? WHERE cookie_uuid=?"""
         cur = conn.cursor()
         cur.execute(sqlup, (name, uuid_))
         conn.commit()
         return render_template("my_page.html")
-    return render_template("change_username.html")
+    return render_template("change_username.html", error="")
 
 
-@app.route("/my_page")
+# TODO add deactivate email ping
+@app.route("/profile")
 def my_page():
     uuid_ = request.cookies.get("userID")
     if not is_connected(uuid_):
@@ -366,32 +483,31 @@ def logout():
     cur = conn.cursor()
     cur.execute(sqlup, (None, uuid_))
     conn.commit()
-    return render_template("index.html")
+    return redirect("/")
 
 
+# TODO password encryption
+# TODO add pagination
 @cross_origin()
 @app.route("/")
 def hello():
     if not is_connected(request.cookies.get("userID")):
-        return render_template(
-            "homepage.html",
-            is_logged=str(is_connected(request.cookies.get("userID"))),
-            images=get_images(0),
-            likes_nbr=[],
-            all_comments=[],
-            is_likeds=[],
+        images = get_images(0)
+        likes, comments, is_likeds = [], [], []
+        for i in images:
+            likes.append(None)
+            comments.append([])
+            is_likeds.append(False)
+        ret = zip(images, likes, comments, is_likeds)
+    else:
+        images_, likes, comments, is_likeds = get_images_and_infos(
+            0, request.cookies.get("userID")
         )
-    # return render_template("index.html")
-    images_, likes, comments, is_likeds = get_images_and_infos(
-        0, request.cookies.get("userID")
-    )
+        ret = zip(images_, likes, comments, is_likeds)
     return render_template(
         "homepage.html",
         is_logged=str(is_connected(request.cookies.get("userID"))),
-        images=images_,
-        likes_nbr=likes,
-        all_comments=comments,
-        is_likeds=is_likeds,
+        infos=ret,
     )
 
 
@@ -405,7 +521,6 @@ def confirm_inscription(uuid_: str):
         return render_template("homepage.html", is_logged="false", images=get_images(0))
     else:
         cookie = str(uuid.uuid4())
-        print(cookie)
         sqlup = """ UPDATE users SET confirmed=?, cookie_uuid=? WHERE conf_uuid=?"""
         cur = conn.cursor()
         cur.execute(sqlup, (True, cookie, uuid_))
@@ -425,8 +540,6 @@ def signup():
     name = request.form["n_name"]
     password = request.form["n_password"]
     email = request.form["n_email"]
-    print(request)
-    print(name, password)
     check = sanitize_input(name)
     if check != "ok":
         return render_template("signup.html", error=check)
@@ -446,18 +559,12 @@ def signup():
     if check != "ok":
         return render_template("signup.html", error=check)
     conf_uuid = str(uuid.uuid4())
-    sql = """ INSERT INTO users(name, email, password, confirmed, conf_uuid) VALUES(?,?,?,?,?) """
+    sql = """ INSERT INTO users(name, email, password, confirmed, conf_uuid, is_email) VALUES(?,?,?,?,?,?) """
     # sql = """ INSERT INTO users(name, email, password) VALUES(?,?,?) """
     cur = conn.cursor()
     cur.execute(
         sql,
-        (
-            name,
-            email,
-            password,
-            False,
-            conf_uuid,
-        ),
+        (name, email, password, False, conf_uuid, True),
     )
     conn.commit()
     msg = Message(
@@ -478,6 +585,7 @@ def show_webcam():
     return render_template("webcam.html")
 
 
+# TODO add reinitialize password
 @app.route("/login", methods=["POST", "GET"])
 def login():
     # if is_connected(request.cookies.get("userID"), ""):
@@ -493,7 +601,6 @@ def login():
             return render_template("login.html")
         else:
             cookie = str(uuid.uuid4())
-            print(cookie)
             sqlup = """ UPDATE users SET cookie_uuid=? WHERE name=?"""
             cur = conn.cursor()
             cur.execute(sqlup, (cookie, name))
@@ -516,11 +623,11 @@ if __name__ == "__main__":
         print("here", file=sys.stderr)
         conn = sqlite3.connect("basedatatest.sqlite", check_same_thread=False)
         c = conn.cursor()
-        create_table_user_sql = """CREATE TABLE users (user_id int PRIMARY KEY,name text,email text, password text, cookie_uuid text, confirmed boolean, conf_uuid text)"""
+        create_table_user_sql = """CREATE TABLE users (user_id INTEGER PRIMARY KEY AUTOINCREMENT,name text,email text, password text, cookie_uuid text, confirmed boolean, conf_uuid text, is_email boolean)"""
         # create_table_user_sql = """CREATE TABLE users (user_id integer PRIMARY KEY, name text,email text, password text, uuid text)"""
-        create_table_image_sql = """CREATE TABLE images (image_id integer PRIMARY KEY, created datetime default current_timestamp, address text, like_nbr int, user_id int, FOREIGN KEY(user_id) REFERENCES users(user_id))"""
-        create_table_comment_sql = """CREATE TABLE comments (comment_id integer PRIMARY KEY, created datetime default current_timestamp, content text, image_id int, user_id int, FOREIGN KEY(image_id) REFERENCES images(image_id), FOREIGN KEY(user_id) REFERENCES users(user_id))"""
-        create_table_like_sql = """CREATE TABLE likes (like_id integer PRIMARY KEY, image_id int, user_id int, FOREIGN KEY(image_id) REFERENCES images(image_id), FOREIGN KEY(user_id) REFERENCES users(user_id))"""
+        create_table_image_sql = """CREATE TABLE images (image_id INTEGER PRIMARY KEY AUTOINCREMENT, created datetime default current_timestamp, address text, like_nbr int, user_id int, FOREIGN KEY(user_id) REFERENCES users(user_id))"""
+        create_table_comment_sql = """CREATE TABLE comments (comment_id INTEGER PRIMARY KEY AUTOINCREMENT, created datetime default current_timestamp, content text, image_id int, user_id int, FOREIGN KEY(image_id) REFERENCES images(image_id), FOREIGN KEY(user_id) REFERENCES users(user_id))"""
+        create_table_like_sql = """CREATE TABLE likes (like_id INTEGER PRIMARY KEY AUTOINCREMENT, image_id int, user_id int, FOREIGN KEY(image_id) REFERENCES images(image_id), FOREIGN KEY(user_id) REFERENCES users(user_id))"""
         c.execute(create_table_user_sql)
         c.execute(create_table_image_sql)
         c.execute(create_table_comment_sql)

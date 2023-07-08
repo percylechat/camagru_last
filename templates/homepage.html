@@ -55,42 +55,49 @@ body {
   CAMAGRU LOL
     <div class="fake_header">
         {% if is_logged == "True" %}
-          <button class="favorite styled" type="button">
-          create image</button>
-          <button class="favorite styled" type="button">
-          my page
-          </button>
-          <button class="favorite styled" type="button">
-          logout
-          </button>
+          <a class="button" id="CreateImage" href="/webcam" margin-left:30px>
+            Create image</a>
+          <a class="button" id="MyPage" href="/profile" margin-left:30px>
+            Profile</a>
+          <a class="button" id="LogOut" href="/logout" margin-left:30px>
+            Log Out</a>
         {% else %}
           <a class="button" id="SignUp" href="/signup" margin-left:30px>
-          Sign Up</a>
+            Sign Up</a>
           <a class="button" id="LogIn" href="/login">
-          Log In</a>
+            Log In</a>
         {% endif %}
     </div>
     <div>
       {% if is_logged == "True" %}
-        {% for item, like_nbr, comments, is_liked in images, likes_nbr, all_comments, is_likeds %}   
-          <img src="{{ item }}" alt="Image">
-          <div>liked {{ line_nbr }} times</div>
-            <div>{% if is_liked == "True" %}
+        {% for item in infos %}   
+          <img src="{{ item[0] }}" alt="Image">
+          <div>liked {{ item[1] }} times</div>
+            <div>{% if item[3] == "True" %}
               you like it
               UNLIKE BUTTON
               {% else %}
-              you don't like it
-              LIKE BUTTON
+                you don't like it
+                <form action="/add_like" method="POST">
+                  <input type="hidden" name="image" value="{{ item[0] }}">
+                  <input type="submit" value="LIKE">
+                </form>
               {% endif %}
           </div>
-          {% for comment in comments%}
-            <div>{{ comment["txt"] }} by {{ comment["author"] }} at {{ comment["date"] }}</div>
-            COMMENT BUTTON AND SHIT
+          {% for comment in item[2]%}
+            <div>{{ comment[0] }} by {{ comment[1] }} at {{ comment[2] }}</div>
           {% endfor %}
+          <h1>Add a Comment</h1>
+            <form action="/add_comment" method="POST">
+            <input type="hidden" name="image" value="{{ item[0] }}">
+            <label for="comment">Your Comment:</label><br>
+            <textarea id="comment" name="comment" rows="4" cols="50" required></textarea><br><br>
+            <input type="submit" value="Submit Comment">
+            </form>
         {% endfor %}
       {% else %}
-        {% for item in images %}   
-          <img src="{{ item }}" alt="Image">
+        {% for item in infos %}   
+          <img src="{{ item[0] }}" alt="Image">
         {% endfor %}
       {% endif %}
     </div>
