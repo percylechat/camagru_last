@@ -3,12 +3,14 @@ import sqlite3
 from sqlite3 import Error
 import os
 import base64
+import sys
 import uuid
+
+from PIL import Image
 from flask_cors import CORS, cross_origin
 from flask_mail import Mail, Message
-import sys
 
-import sys
+
 
 
 app = Flask(__name__, static_url_path="/images/", static_folder="images/")
@@ -41,6 +43,13 @@ def get_user_name(user_id):
     cur = conn.cursor()
     sqlfetch = """SELECT name from users WHERE user_id=?"""
     cur.execute(sqlfetch, (user_id,))
+    name = cur.fetchone()
+    return name[0]
+
+def get_user_id(uuid):
+    cur = conn.cursor()
+    sqlfetch = """SELECT user_id from users WHERE cookie_uuid=?"""
+    cur.execute(sqlfetch, (uuid,))
     name = cur.fetchone()
     return name[0]
 
@@ -128,17 +137,24 @@ def get_images(index: int):
     return ret
 
 
-# @cross_origin()
-@app.route("/send_webcam", methods=["POST"])
-def send_webcam():
-    image_data = request.get_json()["image"]
-    image_filter = request.get_json()["filter"]
-    print("image: ", image_data, image_filter)
-    # Save the image to a file or perform any other desired operations
-    # Example: saving the image to a file named 'image.jpg'
-    # with open("image.png", "wb") as file:
-    #     file.write(base64.b64decode(image_data.split(",")[1]))
-    # return {"message": "Image uploaded successfully"}
+def delete_image(address):
+    cur = conn.cursor()
+    sql = "DELETE FROM images WHERE address=?"
+    cur.execute(sql, (address))
+    cur.commit()
+
+
+def get_images(id_: int):
+    cur = conn.cursor()
+    sql = "SELECT address FROM images WHERE user_id=? ORDER BY created"
+    cur.execute(sql, (id_))
+    res = cur.fetchall()
+    i = 0
+    ret = []
+    while i < len(res):
+        ret.append(res[i][2])
+        i += 1
+    return ret
 
 
 # @app.route("/get_image", methods=["POST, GET"])
@@ -332,11 +348,46 @@ def add_comment():
     return redirect("/")
 
 
+#TODO add 3rd image
+@app.route("/webcam", methods=["POST", "GET"])
+def show_webcam():
+    return render_template("webcam.html")
+
+#TODO html display to see images and delete
+
+
+# @cross_origin()
+
+def merge_image(img_name, image_filter, uuid_):
+    id_ = get_user_id(uuid_)
+    name_end = str(uuid.uuid4())
+    image_base = Image.open(img_name)
+    image_on = Image.open(image_filter)
+    if image_base.size != image_on.size:
+        print("Les dimensions des images ne correspondent pas.")
+    image_on = image_on.convert("RGBA")
+    image_end = Image.alpha_composite(image_base.convert("RGBA"), image_on)
+    image_end.save("images/"+name_end+".png")
+    c = conn.cursor()
+    sql = """ INSERT INTO images(address, user_id, like_nbr) VALUES(?,?,?) """
+    c.execute(sql, (name_end, id_, 0))
+    conn.commit()
+
+@app.route("/send_webcam", methods=["POST"])
+def send_webcam():
+    image_data = request.get_json()["image"]
+    image_filter = request.get_json()["filter"]
+    uuid_ = request.cookies.get("userID")
+    name = str(uuid.uuid4())
+    img_name = "images/" + name + ".png"
+    with open(img_name, "wb") as file:
+        file.write(base64.b64decode(image_data.split(",")[1]))
+    merge_image(img_name, image_filter, uuid_)
+    return {"message": "Image uploaded successfully"}
+
+
 @app.route("/uploader", methods=["POST"])
 def upload():
-    # print(request)
-    print("This is error output", request, file=sys.stderr)
-    print("This is standard output", file=sys.stdout)
     if request.method == "POST":
         # check if the post request has the file part
         if "file" not in request.files:
@@ -456,7 +507,7 @@ def change_name():
         check = sanitize_input(name)
         if check != "ok":
             return render_template("change_username.html", error=check)
-        check = valid_useris_likename(name)
+        check = valid_username(name)
         if check != "ok":
             return render_template("change_username.html", error=check)
         sqlup = """ UPDATE users SET name=? WHERE cookie_uuid=?"""
@@ -580,11 +631,6 @@ def signup():
     )
     mail.send(msg)
     return render_template("success_signup.html", email=email)
-
-#TODO add 3rd image
-@app.route("/webcam", methods=["POST", "GET"])
-def show_webcam():
-    return render_template("webcam.html")
 
 
 # TODO add reinitialize password

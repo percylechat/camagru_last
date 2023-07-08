@@ -5,7 +5,7 @@
   // calculated based on the aspect ratio of the input stream.
   let selectedImage = null
   var width = 640;    // We will scale the photo width to this
-  var height = 400;     // This will be computed based on the input stream
+  var height = 480;     // This will be computed based on the input stream
 
   // |streaming| indicates whether or not we're currently streaming
   // video from the camera. Obviously, we start at false.
@@ -95,12 +95,13 @@
     
       var data = canvas.toDataURL('image/png');
       function sendImageToServer(imageData) {
+        console.log("here is the selected imùage", selectedImage.alt)
         fetch('http://localhost:5000/send_webcam', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ image: imageData, filter: selectedImage }),
+          body: JSON.stringify({ image: imageData, filter: selectedImage.alt }),
         })
           .then(response => response.json())
           .then(data => {
