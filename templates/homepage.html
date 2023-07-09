@@ -106,15 +106,12 @@ body {
     </div>
     {% set index_int = index | int %}
     {% if index_int > 0 %}
-      index int{{index_int}}
       {% set index = index_int - 1 %}
-      index {{index}}
       <form action="/" method="GET">
           <input type="hidden" name="index" value="{{ index }}">
           <button type="submit">Previous</button>
         </form>
     {% endif %}
-    index int{{index_int}}
     {% set index = index_int + 1 %}
     <form action="/" method="GET">
       <input type="hidden" name="index" value="{{ index }}">

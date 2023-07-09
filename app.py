@@ -169,16 +169,6 @@ def get_images_for_user(id_: int):
 # return ''
 
 
-def check_which_page(username: str):
-    sqlfetch = """SELECT * from users WHERE name=?"""
-    cur = conn.cursor()
-    cur.execute(sqlfetch, (username,))
-    rep = cur.fetchall()
-    if rep[0].cookie_uuid == request.cookies.get("userID"):
-        return redirect("/my_page")
-    return redirect("/profile")
-
-
 def sanitize_input(txt: str) -> str:
     if "delete" in txt.lower():
         return "Forbidden word"
@@ -379,6 +369,8 @@ def add_comment():
 @app.route("/webcam", methods=["POST", "GET"])
 def show_webcam():
     uuid_ = request.cookies.get("userID")
+    if not is_connected(uuid_):
+        return redirect("/404error")
     return render_template("webcam.html", infos=get_images_for_user(get_user_id(uuid_)))
 
 
@@ -435,7 +427,7 @@ def upload():
 
 @app.route("/404error")
 def _404error():
-    return render_template("404.html")
+    return render_template("images/404.html")
 
 
 @app.route("/success_co")
@@ -460,7 +452,7 @@ def change_pref():
     cur = conn.cursor()
     cur.execute(sqlup, (pref, uuid_))
     conn.commit()
-    return render_template("my_page.html")
+    return render_template("my_page.html", pref_email=pref)
 
 
 @cross_origin()
@@ -483,7 +475,7 @@ def change_email():
         cur = conn.cursor()
         cur.execute(sqlup, (name, uuid_))
         conn.commit()
-        return render_template("my_page.html")
+        return render_template("my_page.html", pref_email=get_email_is_true(uuid_))
     return render_template("change_useremail.html", error="")
 
 
@@ -509,7 +501,7 @@ def change_password():
         cur = conn.cursor()
         cur.execute(sqlup, (hash_, uuid_))
         conn.commit()
-        return render_template("my_page.html")
+        return render_template("my_page.html", pref_email=get_email_is_true(uuid_))
     return render_template("change_userpassword.html", error="")
 
 
@@ -533,7 +525,7 @@ def change_name():
         cur = conn.cursor()
         cur.execute(sqlup, (name, uuid_))
         conn.commit()
-        return render_template("my_page.html")
+        return render_template("my_page.html", pref_email=get_email_is_true(uuid_))
     return render_template("change_username.html", error="")
 
 
@@ -543,7 +535,7 @@ def my_page():
     uuid_ = request.cookies.get("userID")
     if not is_connected(uuid_):
         return redirect("/404error")
-    return render_template("my_page.html")
+    return render_template("my_page.html", pref_email=get_email_is_true(uuid_))
 
 
 @app.route("/logout")
@@ -558,7 +550,6 @@ def logout():
     return redirect("/")
 
 
-# TODO add pagination
 @cross_origin()
 @app.route("/")
 def hello(index: int = 0):
@@ -665,7 +656,7 @@ def reset_password():
     cur = conn.cursor()
     cur.execute(sqlfetch, (name,))
     email = cur.fetchone()
-    if email is None:
+    if email[0] is None:
         return render_template("login.html", error="This user does not exist")
     new_pass = str(uuid.uuid4())
     bytes_ = new_pass.encode('utf-8')
@@ -674,10 +665,10 @@ def reset_password():
     cur = conn.cursor()
     cur.execute(sqlup, (hash_, name))
     conn.commit()
-    print(email)
+    print(email, email[0])
     msg = Message(
         "Camagru",
-        recipients=[email],
+        recipients=[email[0]],
         html=render_template(
             "email_reset_password.html",
             new_password=new_pass,
@@ -690,8 +681,8 @@ def reset_password():
 
 @app.route("/login", methods=["POST", "GET"])
 def login():
-    # if is_connected(request.cookies.get("userID"), ""):
-    #     return redirect("/home")
+    if is_connected(request.cookies.get("userID")):
+        return redirect("/")
     if request.method == "POST":
         name = request.form["name"]
         password = request.form["password"]
@@ -739,12 +730,12 @@ if __name__ == "__main__":
         c.execute(create_table_comment_sql)
         c.execute(create_table_like_sql)
         conn.commit()
-        sql = """ INSERT INTO users(name, email, password, confirmed, is_email) VALUES(?,?,?,?,?) """
-        c.execute(sql, ("toto","percevallechat@gmail.com", "xx", True, True))
-        conn.commit()
-        sql = """ INSERT INTO images(address, user_id, like_nbr) VALUES(?,?,?) """
-        c.execute(sql, ("images/cat.png", 1, 0))
-        conn.commit()
+        # sql = """ INSERT INTO users(name, email, password, confirmed, is_email) VALUES(?,?,?,?,?) """
+        # c.execute(sql, ("toto","percevallechat@gmail.com", "xx", True, True))
+        # conn.commit()
+        # sql = """ INSERT INTO images(address, user_id, like_nbr) VALUES(?,?,?) """
+        # c.execute(sql, ("images/cat.png", 1, 0))
+        # conn.commit()
     else:
         print("there", file=sys.stderr)
         conn = sqlite3.connect("basedatatest.sqlite", check_same_thread=False)
