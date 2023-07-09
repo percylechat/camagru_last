@@ -14,7 +14,6 @@ def merge_image(base: str, filters: str):
     image_superposee = image_superposee.convert("RGBA")
     image_fusionnee = Image.alpha_composite(image_base.convert("RGBA"), image_superposee)
 
-    
     image_fusionnee.show()
 
 

@@ -73,9 +73,12 @@ body {
         {% for item in infos %}   
           <img src="{{ item[0] }}" alt="Image">
           <div>liked {{ item[1] }} times</div>
-            <div>{% if item[3] == "True" %}
+            <div>{% if item[3] == True %}
               you like it
-              UNLIKE BUTTON
+              <form action="/remove_like" method="POST">
+                <input type="hidden" name="image" value="{{ item[0] }}">
+                <input type="submit" value="UNLIKE">
+              </form>
               {% else %}
                 you don't like it
                 <form action="/add_like" method="POST">
@@ -101,5 +104,21 @@ body {
         {% endfor %}
       {% endif %}
     </div>
+    {% set index_int = index | int %}
+    {% if index_int > 0 %}
+      index int{{index_int}}
+      {% set index = index_int - 1 %}
+      index {{index}}
+      <form action="/" method="GET">
+          <input type="hidden" name="index" value="{{ index }}">
+          <button type="submit">Previous</button>
+        </form>
+    {% endif %}
+    index int{{index_int}}
+    {% set index = index_int + 1 %}
+    <form action="/" method="GET">
+      <input type="hidden" name="index" value="{{ index }}">
+      <button type="submit">Next</button>
+    </form>
   </body>
 </html>

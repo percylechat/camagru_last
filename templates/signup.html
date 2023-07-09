@@ -50,14 +50,12 @@
 </style>
 </head>
 <body>
-  <div id="error">{{error}}</div>
   <div>
+    {{error}}
     <form method="POST" action="{{ url_for('signup') }}">
         <label>Name</label><input name="n_name" type="text" id='id_name' required />
         <label>password</label><input name="n_password" type="text" id="id_password" required/>
         <label>email</label><input name="n_email" type="text" id="id_email" required/>
         <input type="submit" value="submit" />
   </div>
-  // <!-- <script src="./node_modules/bcrypt" type="text/javascript"></script> -->
-  <!-- <script src=./test1.js type="module"></script> -->
 </body>

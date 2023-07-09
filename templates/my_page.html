@@ -67,7 +67,20 @@
       Change your password</a>
     <a class="button" id="Useremail" href="/change_useremail" margin-left:30px>
       Change your email</a>
-    <a class="button" id="Userpref" href="/change_preference" margin-left:30px>
+    {% if pref_email == True %}
+      You currently receive emails for each new comment on one of your images.
+      <form action="/change_preference" method="POST">
+      <input type="hidden" name="pref_email" value="{{ pref_email }}">
+      <input type="submit" value="Stop alerts">
+    </form>
+    {% else %}
+      You don't receive alerts on new comments.
+      <form action="/change_preference" method="POST">
+        <input type="hidden" name="pref_email" value="{{ pref_email }}">
+      <input type="submit" value="Activate alerts">
+    </form>
+    {% endif %}
+      <a class="button" id="Userpref" href="/change_preference" margin-left:30px>
       Change your email preference</a>
   </div>
   </body>

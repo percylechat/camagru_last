@@ -5,10 +5,12 @@ import os
 import base64
 import sys
 import uuid
+import re
 
 from PIL import Image
 from flask_cors import CORS, cross_origin
 from flask_mail import Mail, Message
+import bcrypt
 
 
 
@@ -22,12 +24,12 @@ ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
 app.config["MAIL_SERVER"] = "mail.gandi.net"
 app.config["MAIL_PORT"] = 465
 app.config["MAIL_USE_SSL"] = True
-# TODO variable d env pour mail
 app.config["MAIL_USERNAME"] = "camagru@greatparis.fr"
 app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PWD")
 mail = Mail(app)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["CORS_HEADERS"] = "Content-Type"
+salt = bcrypt.gensalt()
 CORS(app)
 
 
@@ -89,8 +91,8 @@ def is_image_liked(image: str, user: str) -> bool:
         ),
     )
     resp = cur.fetchone()
-    print(resp, resp[0])
-    if resp[0] is not None:
+    print(resp)
+    if resp is None:
         return False
     return True
 
@@ -129,19 +131,12 @@ def get_images(index: int):
     cur.execute(sql)
     res = cur.fetchall()
     true_index = index * 5
-    i = 0
+    i = true_index
     ret = []
     while i < len(res) and i < true_index + 5:
         ret.append(res[i][2])
         i += 1
     return ret
-
-
-def delete_image(address):
-    cur = conn.cursor()
-    sql = "DELETE FROM images WHERE address=?"
-    cur.execute(sql, (address))
-    cur.commit()
 
 
 def get_images_for_user(id_: int):
@@ -198,7 +193,6 @@ def sanitize_input(txt: str) -> str:
     return "ok"
 
 
-# TODO add better validation rules ?
 def valid_password(password: str) -> bool:
     if len(password) < 8:
         return "Password is too short"
@@ -209,15 +203,16 @@ def valid_password(password: str) -> bool:
     return "ok"
 
 
-# TODO check email properly
 def valid_email(email: str) -> bool:
     if "@" not in email or len(email) < 6:
+        return "error in email"
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    if not re.match(pattern, email):
         return "error in email"
     return "ok"
 
 
 def valid_username(user: str) -> str:
-    # if len(password) > 8:
     sqlfetch = """SELECT * from users WHERE name=?"""
     cur = conn.cursor()
     cur.execute(sqlfetch, (user,))
@@ -278,16 +273,30 @@ def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# TAKES image adress and username of current user
-def remove_like(image: str, user: str):
+@app.route("/delete_image", methods=["POST"])
+def delete_image():
+    user = request.cookies.get("userID")
+    address = request.form["image"]
     cur = conn.cursor()
-    sqlfetch = """SELECT user_id from users WHERE name=?"""
+    sql = "DELETE FROM images WHERE address=?"
+    cur.execute(sql, (address,))
+    conn.commit()
+    return redirect("/webcam")
+
+
+@app.route("/remove_like", methods=["POST"])
+def remove_like():
+    user = request.cookies.get("userID")
+    image = request.form["image"]
+    print(image)
+    cur = conn.cursor()
+    sqlfetch = """SELECT user_id from users WHERE cookie_uuid=?"""
     cur.execute(sqlfetch, (user,))
     user_ = cur.fetchone()
     sqlfetch = """SELECT image_id from images WHERE address=?"""
     cur.execute(sqlfetch, (image,))
     image_ = cur.fetchone()
-    sqlfetch = """DELETE * from likes WHERE user_id=? AND image_id=?"""
+    sqlfetch = """DELETE FROM likes WHERE user_id=? AND image_id=?"""
     cur.execute(
         sqlfetch,
         (
@@ -296,6 +305,22 @@ def remove_like(image: str, user: str):
         ),
     )
     conn.commit()
+    sqlfetch = """SELECT like_nbr from images WHERE address=?"""
+    cur.execute(sqlfetch, (image,))
+    like_n_ = cur.fetchone()
+    print("add like", like_n_)
+    new_like = like_n_[0] - 1
+    print(new_like)
+    sql = """ UPDATE images SET like_nbr=? WHERE address=?"""
+    cur.execute(
+        sql,
+        (
+            new_like,
+            image,
+        ),
+    )
+    conn.commit()
+    return redirect("/")
 
 
 @app.route("/add_like", methods=["POST"])
@@ -303,6 +328,7 @@ def add_like():
     user = request.cookies.get("userID")
     image = request.form["image"]
     cur = conn.cursor()
+    print(image)
     sqlfetch = """SELECT user_id from users WHERE cookie_uuid=?"""
     cur.execute(sqlfetch, (user,))
     user_ = cur.fetchone()
@@ -330,7 +356,6 @@ def add_like():
     return redirect("/")
 
 
-# TODO add email ping
 @app.route("/add_comment", methods=["POST"])
 def add_comment():
     user = request.cookies.get("userID")
@@ -356,20 +381,17 @@ def show_webcam():
     uuid_ = request.cookies.get("userID")
     return render_template("webcam.html", infos=get_images_for_user(get_user_id(uuid_)))
 
-#TODO html display to see images and delete
-
-# @cross_origin()
 
 def merge_image(img_name, image_filter, uuid_):
     id_ = get_user_id(uuid_)
-    name_end = str(uuid.uuid4())
+    name_end = "images/"+str(uuid.uuid4())+".png"
     image_base = Image.open(img_name)
     image_on = Image.open(image_filter)
     if image_base.size != image_on.size:
         print("Les dimensions des images ne correspondent pas.")
     image_on = image_on.convert("RGBA")
     image_end = Image.alpha_composite(image_base.convert("RGBA"), image_on)
-    image_end.save("images/"+name_end+".png")
+    image_end.save(name_end)
     c = conn.cursor()
     sql = """ INSERT INTO images(address, user_id, like_nbr) VALUES(?,?,?) """
     c.execute(sql, (name_end, id_, 0))
@@ -423,29 +445,22 @@ def success_co():
     # return redirect("/home.html")
 
 
-# TODO adapt function
 @cross_origin()
-@app.route("/change_preference", methods=["POST", "GET"])
+@app.route("/change_preference", methods=["POST"])
 def change_pref():
     uuid_ = request.cookies.get("userID")
     if not is_connected(uuid_):
         return redirect("/404error")
-    if request.method == "GET":
-        return render_template("change_preference.html", error="")
-    if request.method == "POST":
-        name = request.form["n_name"]
-        check = sanitize_input(name)
-        if check != "ok":
-            return render_template("change_useremail.html", error=check)
-        check = valid_email(name)
-        if check != "ok":
-            return render_template("change_useremail.html", error=check)
-        sqlup = """ UPDATE users SET email=? WHERE cookie_uuid=?"""
-        cur = conn.cursor()
-        cur.execute(sqlup, (name, uuid_))
-        conn.commit()
-        return render_template("my_page.html")
-    return render_template("change_useremail.html", error="")
+    pref = request.form["pref_email"]
+    if pref is True:
+        pref = False
+    else:
+        pref = True
+    sqlup = """ UPDATE users SET is_email=? WHERE cookie_uuid=?"""
+    cur = conn.cursor()
+    cur.execute(sqlup, (pref, uuid_))
+    conn.commit()
+    return render_template("my_page.html")
 
 
 @cross_origin()
@@ -488,9 +503,11 @@ def change_password():
         check = valid_password(name)
         if check != "ok":
             return render_template("change_userpassword.html", error=check)
+        bytes_ = name.encode('utf-8')
+        hash_ = bcrypt.hashpw(bytes_, salt)
         sqlup = """ UPDATE users SET password=? WHERE cookie_uuid=?"""
         cur = conn.cursor()
-        cur.execute(sqlup, (name, uuid_))
+        cur.execute(sqlup, (hash_, uuid_))
         conn.commit()
         return render_template("my_page.html")
     return render_template("change_userpassword.html", error="")
@@ -520,7 +537,7 @@ def change_name():
     return render_template("change_username.html", error="")
 
 
-# TODO add deactivate email ping
+#TODO ensure routes when connected or not
 @app.route("/profile")
 def my_page():
     uuid_ = request.cookies.get("userID")
@@ -541,13 +558,16 @@ def logout():
     return redirect("/")
 
 
-# TODO password encryption
 # TODO add pagination
 @cross_origin()
 @app.route("/")
-def hello():
+def hello(index: int = 0):
+    index = request.args.get("index")
+    if index is None or int(index) < 0:
+        index = 0
+    print(index, type(index))
     if not is_connected(request.cookies.get("userID")):
-        images = get_images(0)
+        images = get_images(int(index))
         likes, comments, is_likeds = [], [], []
         for i in images:
             likes.append(None)
@@ -556,13 +576,14 @@ def hello():
         ret = zip(images, likes, comments, is_likeds)
     else:
         images_, likes, comments, is_likeds = get_images_and_infos(
-            0, request.cookies.get("userID")
+            int(index), request.cookies.get("userID")
         )
         ret = zip(images_, likes, comments, is_likeds)
     return render_template(
         "homepage.html",
         is_logged=str(is_connected(request.cookies.get("userID"))),
         infos=ret,
+        index=str(int(index))
     )
 
 
@@ -614,12 +635,14 @@ def signup():
     if check != "ok":
         return render_template("signup.html", error=check)
     conf_uuid = str(uuid.uuid4())
+    bytes_ = password.encode('utf-8')
+    hash_ = bcrypt.hashpw(bytes_, salt)
     sql = """ INSERT INTO users(name, email, password, confirmed, conf_uuid, is_email) VALUES(?,?,?,?,?,?) """
     # sql = """ INSERT INTO users(name, email, password) VALUES(?,?,?) """
     cur = conn.cursor()
     cur.execute(
         sql,
-        (name, email, password, False, conf_uuid, True),
+        (name, email, hash_, False, conf_uuid, True),
     )
     conn.commit()
     msg = Message(
@@ -635,7 +658,36 @@ def signup():
     return render_template("success_signup.html", email=email)
 
 
-# TODO add reinitialize password
+@app.route("/reset_password", methods=["POST"])
+def reset_password():
+    name = request.form["name"]
+    sqlfetch = """SELECT email from users WHERE name=?"""
+    cur = conn.cursor()
+    cur.execute(sqlfetch, (name,))
+    email = cur.fetchone()
+    if email is None:
+        return render_template("login.html", error="This user does not exist")
+    new_pass = str(uuid.uuid4())
+    bytes_ = new_pass.encode('utf-8')
+    hash_ = bcrypt.hashpw(bytes_, salt)
+    sqlup = """ UPDATE users SET password=? WHERE name=?"""
+    cur = conn.cursor()
+    cur.execute(sqlup, (hash_, name))
+    conn.commit()
+    print(email)
+    msg = Message(
+        "Camagru",
+        recipients=[email],
+        html=render_template(
+            "email_reset_password.html",
+            new_password=new_pass,
+        ),
+        sender="camagru@greatparis.fr",
+    )
+    mail.send(msg)
+    return render_template("reset_email_template.html")
+
+
 @app.route("/login", methods=["POST", "GET"])
 def login():
     # if is_connected(request.cookies.get("userID"), ""):
@@ -643,12 +695,16 @@ def login():
     if request.method == "POST":
         name = request.form["name"]
         password = request.form["password"]
-        sqlfetch = """SELECT * from users WHERE name=? AND password=?"""
+        sqlfetch = """SELECT * from users WHERE name=?"""
         cur = conn.cursor()
-        cur.execute(sqlfetch, (name, password))
-        rep = cur.fetchall()
-        if not rep:
-            return render_template("login.html")
+        cur.execute(sqlfetch, (name,))
+        rep = cur.fetchone()
+        if rep is None:
+            return render_template("login.html", error="This user does not exist")
+        userBytes = password.encode('utf-8')
+        result = bcrypt.checkpw(userBytes, rep[3])
+        if result is False:
+            return render_template("login.html", error="Wrong password")
         else:
             cookie = str(uuid.uuid4())
             sqlup = """ UPDATE users SET cookie_uuid=? WHERE name=?"""
@@ -661,7 +717,7 @@ def login():
             # create_table_sql = """CREATE TABLE users (id int PRIMARY KEY,name text,email text, password text, uuid text, confirmed boolean, conf_uuid text)"""
 
             # return redirect("/success_co")
-    return render_template("login.html")
+    return render_template("login.html", error="")
 
 
 print("toto", file=sys.stderr)
@@ -683,8 +739,8 @@ if __name__ == "__main__":
         c.execute(create_table_comment_sql)
         c.execute(create_table_like_sql)
         conn.commit()
-        sql = """ INSERT INTO users(name) VALUES(?) """
-        c.execute(sql, ("toto",))
+        sql = """ INSERT INTO users(name, email, password, confirmed, is_email) VALUES(?,?,?,?,?) """
+        c.execute(sql, ("toto","percevallechat@gmail.com", "xx", True, True))
         conn.commit()
         sql = """ INSERT INTO images(address, user_id, like_nbr) VALUES(?,?,?) """
         c.execute(sql, ("images/cat.png", 1, 0))

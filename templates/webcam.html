@@ -44,7 +44,7 @@
   
   .container {
       display: flex;
-      width: 95%;
+      width: 100%;
     }
   
     .maindivwebcam {
@@ -88,26 +88,57 @@
     width: 340px;
     display:inline-block;
   }
+  div.fake_header{
+    width: 95%;
+    border: 5px solid rgb(40, 184, 40);
+    padding: 20px;
+    margin: auto;
+    content: center;
+  }
+  .button {
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+  }
   </style>
 	<script src="./../images/capture.js">
 	</script>
     </head>
   <body>
+    <div class="fake_header">
+        <a class="button" id="Gallery" href="/" margin-left:30px>
+          Gallery</a>
+        <a class="button" id="MyPage" href="/profile" margin-left:30px>
+          Profile</a>
+        <a class="button" id="LogOut" href="/logout" margin-left:30px>
+          Log Out</a>
+  </div>
     <div class="container">
       <div class="left-div">
         <div class="camera">
           <video id="video">Webcam unavailable.</video>
         </div>
-        <canvas id="canvas"> </canvas>
+        <!-- <canvas id="canvas"> </canvas>
         <div class="output">
           <img id="photo" alt="Result of image manipulation.">
-        </div>
+        </div> -->
         <div class="image-container">
           <img src="./../images/catok.png" alt="images/catok.png" onclick="selectImage(this)">
           <img src="./../images/frameok.png" alt="images/frameok.png" onclick="selectImage(this)">
           <img src="./../images/flameok.png" alt="images/flameok.png" onclick="selectImage(this)">
         </div>
-        <button id="startbutton">Take a picture</button>
+        <button id="startbutton">Take a picture</button> OR
+        <form action = "/uploader" method = "POST" 
+         enctype = "multipart/form-data">
+         <input type = "file" name = "file" required/>
+         <input type="hidden" id="selectedImage" name="selectedImage" value="" required/>
+         <input type = "submit" value="Upload a picture"/>
+      </form>
       </div>
       <div class="right-div">
         {% for item in infos %}   
